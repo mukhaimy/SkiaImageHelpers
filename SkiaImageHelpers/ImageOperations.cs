@@ -69,63 +69,75 @@ namespace SkiaImageHelpers
             }
         }
 
-        public static byte[] Zoom(byte[] imageData, int newWidth, int newHeight)
+        private static void CalculateAspectResizedDimensions(int originalWidth, int originalHeight, int maxWidth, int maxHeight, out int newWidth, out int newHeight)
         {
-            int maxWidth = newWidth + 2; // Tambah 2 untuk jaga2 kalau error
-            int maxHeight = newHeight + 2; 
+            double aspectRatio = (double)originalWidth / originalHeight;
 
+            if (originalWidth > maxWidth)
+            {
+                newWidth = maxWidth;
+                newHeight = (int)(newWidth / aspectRatio);
+            }
+            else if (originalHeight > maxHeight)
+            {
+                newHeight = maxHeight;
+                newWidth = (int)(newHeight * aspectRatio);
+            }
+            else
+            {
+                // No resizing needed
+                newWidth = originalWidth;
+                newHeight = originalHeight;
+            }
+        }
+
+        public static byte[] Zoom(byte[] imageData, int targetWidth, int targetHeight)
+        {
             using (var inputStream = new SKManagedStream(new MemoryStream(imageData)))
             {
                 using (var originalBitmap = SKBitmap.Decode(inputStream))
                 {
+                    // Specify the maximum dimensions for the resized image
+                    int maxWidth = targetWidth; // Replace with your desired maximum width
+                    int maxHeight = targetHeight; // Replace with your desired maximum height
 
-                    // Calculate the new dimensions while maintaining the aspect ratio
-                    float scaleX = (float)maxWidth / (float)originalBitmap.Width;
-                    float scaleY = (float)maxHeight / (float)originalBitmap.Height;
-                    float scaleR = Math.Max(scaleX, scaleY);
-
-                    
-                    int newTWidth = (int)(originalBitmap.Width * scaleR);   // new temporary width
-                    int newTHeight = (int)(originalBitmap.Height * scaleR);
+                    // Calculate new dimensions while maintaining aspect ratio
+                    int newWidth, newHeight;
+                    CalculateAspectResizedDimensions(originalBitmap.Width, originalBitmap.Height, maxWidth, maxHeight, out newWidth, out newHeight);
 
                     // Resize the image
-                    using (var resizedBitmap = originalBitmap.Resize(new SKImageInfo(newTWidth, newTHeight), SKFilterQuality.High))
+                    using (var resizedBitmap = originalBitmap.Resize(new SKImageInfo(newWidth, newHeight), SKFilterQuality.High))
                     {
-                        int cropX = (newTWidth - maxWidth) / 2;
-                        int cropY = (newTHeight - maxHeight) / 2;
-                        if (cropX > 0) --cropX;
-                        if (cropY > 0) --cropY;
-
-                        // Specify the cropping rectangle (left, top, width, height)
-                        SKRectI cropRect = new SKRectI(cropX, cropY, maxWidth - 2, maxHeight - 2); // Adjust these values as needed
+                        // Calculate the crop rectangle for the center
+                        int cropX = (resizedBitmap.Width - maxWidth) / 2;
+                        int cropY = (resizedBitmap.Height - maxHeight) / 2;
+                        SKRectI cropRect = new SKRectI(cropX, cropY, cropX + maxWidth, cropY + maxHeight);
 
                         // Create a new bitmap with the cropped region
-                        using (var croppedBitmap = new SKBitmap(newWidth, newHeight))
+                        using (var croppedBitmap = new SKBitmap(maxWidth, maxHeight))
                         {
                             using (var canvas = new SKCanvas(croppedBitmap))
                             {
                                 canvas.DrawBitmap(resizedBitmap, cropRect, new SKRectI(0, 0, croppedBitmap.Width, croppedBitmap.Height));
                             }
 
-                            // Save the cropped image to a new MemoryStream
+                            // Save the resized and cropped image to a new MemoryStream
                             using (var outputMemoryStream = new MemoryStream())
                             {
                                 using (var outputStream = new SKManagedWStream(outputMemoryStream))
                                 {
-                                    croppedBitmap.Encode(outputStream, SKEncodedImageFormat.Jpeg, 90); // Change format and quality as needed
+                                    croppedBitmap.Encode(outputStream, SKEncodedImageFormat.Jpeg, 100); // Change format and quality as needed
                                 }
 
-                                // Now, outputMemoryStream contains the cropped image data
-                                byte[] croppedImageData = outputMemoryStream.ToArray();
+                                // Now, outputMemoryStream contains the resized and cropped image data
+                                byte[] resizedAndCroppedImageData = outputMemoryStream.ToArray();
 
-                                // You can use the croppedImageData as needed (e.g., save it to a file, send it over the network, etc.)
-                                return croppedImageData;
+                                return resizedAndCroppedImageData;
                             }
                         }
-
                     }
                 }
-            }
+            } // EOF - using (var inputStream = new SKManagedStream(new MemoryStream(imageData)))
         }
     }
 }
