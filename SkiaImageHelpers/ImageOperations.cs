@@ -7,7 +7,9 @@ namespace SkiaImageHelpers
 {
     public static class ImageOperations
     {
-        public static byte[] ResizeToWidth(byte[] imageData, int newWidth)
+        public static readonly int QualityNumber = 95;
+
+        public static byte[] ResizeToWidth(byte[] imageData, int newWidth, bool isPng = false)
         {
             using (var inputStream = new SKManagedStream(new MemoryStream(imageData)))
             {
@@ -25,7 +27,15 @@ namespace SkiaImageHelpers
                         {
                             using (var outputStream = new SKManagedWStream(outputMemoryStream))
                             {
-                                resizedBitmap.Encode(outputStream, SKEncodedImageFormat.Jpeg, 90); // Change format and quality as needed
+                                if(isPng)
+                                {
+                                    resizedBitmap.Encode(outputStream, SKEncodedImageFormat.Png, QualityNumber);
+                                }
+                                else
+                                {
+                                    resizedBitmap.Encode(outputStream, SKEncodedImageFormat.Jpeg, QualityNumber);
+                                }
+                                
                             }
 
                             // Now, outputMemoryStream contains the resized image data
@@ -38,7 +48,7 @@ namespace SkiaImageHelpers
             }
         }
 
-        public static byte[] ResizeToHeight(byte[] imageData, int newHeight)
+        public static byte[] ResizeToHeight(byte[] imageData, int newHeight, bool isPng = false)
         {
             using (var inputStream = new SKManagedStream(new MemoryStream(imageData)))
             {
@@ -56,7 +66,14 @@ namespace SkiaImageHelpers
                         {
                             using (var outputStream = new SKManagedWStream(outputMemoryStream))
                             {
-                                resizedBitmap.Encode(outputStream, SKEncodedImageFormat.Jpeg, 90); // Change format and quality as needed
+                                if (isPng)
+                                {
+                                    resizedBitmap.Encode(outputStream, SKEncodedImageFormat.Png, QualityNumber);
+                                }
+                                else
+                                {
+                                    resizedBitmap.Encode(outputStream, SKEncodedImageFormat.Jpeg, QualityNumber);
+                                }
                             }
 
                             // Now, outputMemoryStream contains the resized image data
@@ -91,7 +108,7 @@ namespace SkiaImageHelpers
             }
         }
 
-        public static byte[] Zoom(byte[] imageData, int targetWidth, int targetHeight)
+        public static byte[] Zoom(byte[] imageData, int targetWidth, int targetHeight, bool isPng = false)
         {
             using (var inputStream = new SKManagedStream(new MemoryStream(imageData)))
             {
@@ -126,7 +143,14 @@ namespace SkiaImageHelpers
                             {
                                 using (var outputStream = new SKManagedWStream(outputMemoryStream))
                                 {
-                                    croppedBitmap.Encode(outputStream, SKEncodedImageFormat.Jpeg, 100); // Change format and quality as needed
+                                    if (isPng)
+                                    {
+                                        croppedBitmap.Encode(outputStream, SKEncodedImageFormat.Png, QualityNumber);
+                                    }
+                                    else
+                                    {
+                                        croppedBitmap.Encode(outputStream, SKEncodedImageFormat.Jpeg, QualityNumber);
+                                    }                                    
                                 }
 
                                 // Now, outputMemoryStream contains the resized and cropped image data
@@ -139,5 +163,42 @@ namespace SkiaImageHelpers
                 }
             } // EOF - using (var inputStream = new SKManagedStream(new MemoryStream(imageData)))
         }
+
+        public static int ImageWidth(byte[] imageData)
+        {
+            try
+            {
+                using (var inputStream = new SKManagedStream(new MemoryStream(imageData)))
+                {
+                    using (var originalBitmap = SKBitmap.Decode(inputStream))
+                    {
+                        return originalBitmap.Width;                        
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                return -1;
+            }            
+        }
+
+        public static int ImageHeight(byte[] imageData)
+        {
+            try
+            {
+                using (var inputStream = new SKManagedStream(new MemoryStream(imageData)))
+                {
+                    using (var originalBitmap = SKBitmap.Decode(inputStream))
+                    {
+                        return originalBitmap.Height;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                return -1;
+            }
+        }
+
     }
 }
