@@ -1,17 +1,43 @@
-﻿using System.IO;
-using SkiaSharp;
-using static System.Net.Mime.MediaTypeNames;
+﻿using SkiaSharp;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
-
-namespace SkiaImageHelpers
+namespace SkiaImageHelpers9
 {
-    public record MySkiaImageResult(bool IsSuccess, Byte[]? Data, Exception? TheException = null);
-
     public static class ImageOperations
     {
+
         public static readonly int QualityNumber = 95;
 
-        public static MySkiaImageResult ResizeToWidth(byte[] imageData, int newWidth, bool isPng = false)
+        private static (int newWidth, int newHeight) CalculateAspectResizedDimensions(int originalWidth, int originalHeight, int maxWidth, int maxHeight)
+        {
+            int newWidth;
+            int newHeight;
+            double aspectRatio = (double)originalWidth / originalHeight;
+
+            if (originalWidth > maxWidth)
+            {
+                newWidth = maxWidth;
+                newHeight = (int)(newWidth / aspectRatio);
+            }
+            else if (originalHeight > maxHeight)
+            {
+                newHeight = maxHeight;
+                newWidth = (int)(newHeight * aspectRatio);
+            }
+            else
+            {
+                // No resizing needed
+                newWidth = originalWidth;
+                newHeight = originalHeight;
+            }
+            return (newWidth, newHeight);
+        }
+
+        public static byte[] ResizeToWidth(byte[] imageData, int newWidth, bool isPng = false)
         {
             try
             {
@@ -46,7 +72,7 @@ namespace SkiaImageHelpers
                                 // Now, outputMemoryStream contains the resized image data
                                 resizedImageData = outputMemoryStream.ToArray();
 
-                                return new MySkiaImageResult(true, resizedImageData);
+                                return resizedImageData;
 
                             }
                         }
@@ -56,10 +82,10 @@ namespace SkiaImageHelpers
 
             }
             catch (Exception ex)
-            {
-                return new MySkiaImageResult(false, default, ex);
+            {                
+                throw new Exception("Unexpected error occurred while resizing image.", ex);
             }
-            
+
         }
 
         public static byte[] ResizeToHeight(byte[] imageData, int newHeight, bool isPng = false)
@@ -73,7 +99,7 @@ namespace SkiaImageHelpers
                     int newWidth = (int)(newHeight * aspectRatio);
 
                     // Resize the image
-                    using (var resizedBitmap = originalBitmap.Resize(new SKImageInfo(newWidth, newHeight), SKFilterQuality.High))
+                    using (var resizedBitmap = originalBitmap.Resize(new SKImageInfo(newWidth, newHeight), SKSamplingOptions.Default))
                     {
                         // Save the resized image to a new MemoryStream
                         using (var outputMemoryStream = new MemoryStream())
@@ -99,32 +125,7 @@ namespace SkiaImageHelpers
                 }
             }
         }
-
-        private static (int newWidth, int newHeight) CalculateAspectResizedDimensions(int originalWidth, int originalHeight, int maxWidth, int maxHeight)
-        {
-            int newWidth;
-            int newHeight;
-            double aspectRatio = (double)originalWidth / originalHeight;
-
-            if (originalWidth > maxWidth)
-            {
-                newWidth = maxWidth;
-                newHeight = (int)(newWidth / aspectRatio);
-            }
-            else if (originalHeight > maxHeight)
-            {
-                newHeight = maxHeight;
-                newWidth = (int)(newHeight * aspectRatio);
-            }
-            else
-            {
-                // No resizing needed
-                newWidth = originalWidth;
-                newHeight = originalHeight;
-            }
-            return (newWidth, newHeight);
-        }
-
+        
         public static byte[] Zoom(byte[] imageData, int targetWidth, int targetHeight, bool isPng = false)
         {
             using (var inputStream = new SKManagedStream(new MemoryStream(imageData)))
@@ -135,12 +136,11 @@ namespace SkiaImageHelpers
                     int maxWidth = targetWidth; // Replace with your desired maximum width
                     int maxHeight = targetHeight; // Replace with your desired maximum height
 
-                    // Calculate new dimensions while maintaining aspect ratio
-                    int newWidth, newHeight;
-                    CalculateAspectResizedDimensions(originalBitmap.Width, originalBitmap.Height, maxWidth, maxHeight, out newWidth, out newHeight);
+                    // Calculate new dimensions while maintaining aspect ratio                    
+                    var nueDim =  CalculateAspectResizedDimensions(originalBitmap.Width, originalBitmap.Height, maxWidth, maxHeight);
 
                     // Resize the image
-                    using (var resizedBitmap = originalBitmap.Resize(new SKImageInfo(newWidth, newHeight), SKFilterQuality.High))
+                    using (var resizedBitmap = originalBitmap.Resize(new SKImageInfo(nueDim.newWidth, nueDim.newHeight), SKSamplingOptions.Default))
                     {
                         // Calculate the crop rectangle for the center
                         int cropX = (resizedBitmap.Width - maxWidth) / 2;
@@ -167,7 +167,7 @@ namespace SkiaImageHelpers
                                     else
                                     {
                                         croppedBitmap.Encode(outputStream, SKEncodedImageFormat.Jpeg, QualityNumber);
-                                    }                                    
+                                    }
                                 }
 
                                 // Now, outputMemoryStream contains the resized and cropped image data
@@ -189,14 +189,14 @@ namespace SkiaImageHelpers
                 {
                     using (var originalBitmap = SKBitmap.Decode(inputStream))
                     {
-                        return originalBitmap.Width;                        
+                        return originalBitmap.Width;
                     }
                 }
             }
             catch (Exception)
             {
                 return -1;
-            }            
+            }
         }
 
         public static int ImageHeight(byte[] imageData)
@@ -211,12 +211,13 @@ namespace SkiaImageHelpers
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return -1;
+                throw new Exception("Unexpected error occurred while creating book.", ex);
             }
         }
 
     }
+
 
 }
